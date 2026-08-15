@@ -9,7 +9,47 @@
 * 🟢 You can import this file directly.
 */
 
+export const Role = {
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  ADMIN: 'ADMIN',
+  USER: 'USER'
+} as const
+
+export type Role = (typeof Role)[keyof typeof Role]
 
 
-// This file is empty because there are no enums in the schema.
-export {}
+export const UserStatus = {
+  ACTIVE: 'ACTIVE',
+  BLOCKED: 'BLOCKED',
+  DELETED: 'DELETED'
+} as const
+
+export type UserStatus = (typeof UserStatus)[keyof typeof UserStatus]
+
+
+export const WorkspaceRole = {
+  OWNER: 'OWNER',
+  ADMIN: 'ADMIN',
+  MEMBER: 'MEMBER'
+} as const
+
+export type WorkspaceRole = (typeof WorkspaceRole)[keyof typeof WorkspaceRole]
+
+
+export const TaskStatus = {
+  TODO: 'TODO',
+  IN_PROGRESS: 'IN_PROGRESS',
+  IN_REVIEW: 'IN_REVIEW',
+  DONE: 'DONE'
+} as const
+
+export type TaskStatus = (typeof TaskStatus)[keyof typeof TaskStatus]
+
+
+export const TaskPriority = {
+  LOW: 'LOW',
+  MEDIUM: 'MEDIUM',
+  HIGH: 'HIGH'
+} as const
+
+export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority]
