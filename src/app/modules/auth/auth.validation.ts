@@ -18,3 +18,9 @@ export const userLoginZodSchema = z.object({
     message: "Password must be at least 6 characters long",
   }),
 });
+
+export const forgotPasswordSchema = z.object({
+  email: z.email({
+    message: "Please provide a valid email address",
+  }),
+});

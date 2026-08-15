@@ -8,6 +8,7 @@ import { jwtUtils } from "../../utils/jwt";
 import { envVars } from "../../config/env";
 import z from "zod";
 import { userLoginZodSchema, userRegisterZodSchema } from "./auth.validation";
+import { UserStatus } from "../../../generated/prisma/enums";
 
 const registerUser = async (payload: z.infer<typeof userRegisterZodSchema>) => {
   const { name, email, password } = payload;
@@ -224,10 +225,54 @@ const changePassword = async (
   };
 };
 
+const forgetPassword = async (email: string) => {
+  await auth.api.requestPasswordResetEmailOTP({
+    body: {
+      email,
+    },
+  });
+};
+
+const resetPassword = async (
+  email: string,
+  otp: string,
+  newPassword: string,
+) => {
+  const isUserExist = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
+
+  if (!isUserExist) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  if (isUserExist.isDeleted || isUserExist.status === UserStatus.DELETED) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  await auth.api.resetPasswordEmailOTP({
+    body: {
+      email,
+      otp,
+      password: newPassword,
+    },
+  });
+
+  await prisma.session.deleteMany({
+    where: {
+      userId: isUserExist.id,
+    },
+  });
+};
+
 export const authService = {
   registerUser,
   loginUser,
   getNewToken,
   logoutUser,
   changePassword,
+  forgetPassword,
+  resetPassword,
 };

@@ -1,7 +1,11 @@
 import { Router } from "express";
 import { authController } from "./auth.controller";
 import { validateRequest } from "../../middleware/validateRequest";
-import { userLoginZodSchema, userRegisterZodSchema } from "./auth.validation";
+import {
+  forgotPasswordSchema,
+  userLoginZodSchema,
+  userRegisterZodSchema,
+} from "./auth.validation";
 import { checkAuth } from "../../middleware/checkAuth";
 import { Role } from "../../../generated/prisma/enums";
 
@@ -26,5 +30,12 @@ router.post(
   checkAuth(Role.USER, Role.ADMIN, Role.SUPER_ADMIN),
   authController.changePassword,
 );
+
+router.post(
+  "/forget-password",
+  validateRequest(forgotPasswordSchema),
+  authController.forgetPassword,
+);
+router.post("/reset-password", authController.resetPassword);
 
 export const authRoutes = router;
