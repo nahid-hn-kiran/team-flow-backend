@@ -1,0 +1,26 @@
+import dotenv from "dotenv";
+dotenv.config();
+
+interface EnvConfig {
+  NODE_ENV: string;
+  PORT: number;
+  DATABASE_URL: string;
+}
+
+const loadEnvVars = (): EnvConfig => {
+  const requiredEnvVars = ["NODE_ENV", "PORT", "DATABASE_URL"];
+
+  requiredEnvVars.forEach((varName) => {
+    if (!process.env[varName]) {
+      throw new Error(`Missing required environment variable: ${varName}`);
+    }
+  });
+
+  return {
+    NODE_ENV: process.env.NODE_ENV as string,
+    PORT: parseInt(process.env.PORT as string, 10),
+    DATABASE_URL: process.env.DATABASE_URL as string,
+  };
+};
+
+export const envVars: EnvConfig = loadEnvVars();
