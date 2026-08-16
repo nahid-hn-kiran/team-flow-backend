@@ -3,6 +3,7 @@ import { workspaceController } from "./workspace.controller";
 import { validateRequest } from "../../middleware/validateRequest";
 import {
   addWorkspaceMemberZodSchema,
+  updateWorkspaceMemberZodSchema,
   workspaceCreateZodSchema,
   workspaceUpdateZodSchema,
 } from "./workspace.validation";
@@ -36,16 +37,35 @@ router.post(
 );
 
 router.get(
-  "/:workspaceId/member",
+  "/:workspaceId/members",
   checkAuth(Role.USER),
   workspaceController.getWorkspaceMembers,
 );
 
+router.get(
+  "/:workspaceId/members/:memberId",
+  checkAuth(Role.USER),
+  workspaceController.getWorkspaceMember,
+);
+
 router.patch(
-  "/:workspaceId/member",
+  "/:workspaceId/members",
   validateRequest(addWorkspaceMemberZodSchema),
   checkAuth(Role.USER),
   workspaceController.addMember,
+);
+
+router.patch(
+  "/:workspaceId/members/:memberId",
+  validateRequest(updateWorkspaceMemberZodSchema),
+  checkAuth(Role.USER),
+  workspaceController.updateMemberRole,
+);
+
+router.delete(
+  "/:workspaceId/members/:memberId",
+  checkAuth(Role.USER),
+  workspaceController.removeMember,
 );
 
 export const workspaceRoutes = router;

@@ -4,6 +4,7 @@ import AppError from "../../errorHelpers/appError";
 import {
   IAddWorkspaceMemberPayload,
   ICreateWorkspacePayload,
+  IUpdateWorkspaceMemberPayload,
   IUpdateWorksspacePayload,
 } from "./workspace.interface";
 import { UserStatus, WorkspaceRole } from "../../../generated/prisma/enums";
@@ -363,12 +364,203 @@ const getWorkspaceMembers = async (
   return members;
 };
 
+const getWorkspaceMember = async (
+  workspaceId: string,
+  requesterId: string,
+  memberId: string,
+) => {
+  const requester = await prisma.workspaceMember.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId: requesterId,
+      },
+    },
+  });
+
+  if (!requester) {
+    throw new AppError(status.NOT_FOUND, "Workspace not found.");
+  }
+
+  const member = await prisma.workspaceMember.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId: memberId,
+      },
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+  if (!member) {
+    throw new AppError(status.NOT_FOUND, "Member not found.");
+  }
+
+  return member;
+};
+
+const updateMemberRole = async (
+  workspaceId: string,
+  requesterId: string,
+  memberId: string,
+  payload: IUpdateWorkspaceMemberPayload,
+) => {
+  const requester = await prisma.workspaceMember.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId: requesterId,
+      },
+    },
+  });
+
+  if (!requester) {
+    throw new AppError(status.NOT_FOUND, "Workspace not found.");
+  }
+
+  if (requester.role !== WorkspaceRole.OWNER) {
+    throw new AppError(
+      status.FORBIDDEN,
+      "Only the workspace owner can change member roles.",
+    );
+  }
+
+  const member = await prisma.workspaceMember.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId: memberId,
+      },
+    },
+  });
+
+  if (!member) {
+    throw new AppError(status.NOT_FOUND, "Member not found.");
+  }
+
+  if (member.role === WorkspaceRole.OWNER) {
+    throw new AppError(
+      status.FORBIDDEN,
+      "The workspace owner's role cannot be changed.",
+    );
+  }
+
+  const updatedMember = await prisma.workspaceMember.update({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId: memberId,
+      },
+    },
+    data: {
+      role: payload.role,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+  return updatedMember;
+};
+
+const removeMember = async (
+  workspaceId: string,
+  requesterId: string,
+  memberId: string,
+) => {
+  const requester = await prisma.workspaceMember.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId: requesterId,
+      },
+    },
+  });
+
+  if (!requester) {
+    throw new AppError(status.NOT_FOUND, "Workspace not found.");
+  }
+
+  if (
+    requester.role !== WorkspaceRole.OWNER &&
+    requester.role !== WorkspaceRole.ADMIN
+  ) {
+    throw new AppError(
+      status.FORBIDDEN,
+      "You do not have permission to remove members.",
+    );
+  }
+
+  const member = await prisma.workspaceMember.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId: memberId,
+      },
+    },
+  });
+
+  if (!member) {
+    throw new AppError(status.NOT_FOUND, "Member not found.");
+  }
+
+  if (member.role === WorkspaceRole.OWNER) {
+    throw new AppError(
+      status.FORBIDDEN,
+      "The workspace owner cannot be removed.",
+    );
+  }
+
+  if (
+    requester.role === WorkspaceRole.ADMIN &&
+    member.role === WorkspaceRole.ADMIN
+  ) {
+    throw new AppError(
+      status.FORBIDDEN,
+      "An admin cannot remove another admin.",
+    );
+  }
+
+  await prisma.workspaceMember.delete({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId: memberId,
+      },
+    },
+  });
+
+  return null;
+};
+
 export const workspaceService = {
   createWorkspace,
   getMyWorkspaces,
   getWorkspaceById,
   updateWorkspace,
   deleteWorkspace,
+  //   Member
   addMember,
   getWorkspaceMembers,
+  getWorkspaceMember,
+  updateMemberRole,
+  removeMember,
 };
