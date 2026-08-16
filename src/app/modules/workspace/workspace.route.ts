@@ -38,33 +38,33 @@ router.post(
 
 router.get(
   "/:workspaceId/members",
-  checkAuth(Role.USER),
+  checkAuth(Role.USER, Role.ADMIN, Role.SUPER_ADMIN),
   workspaceController.getWorkspaceMembers,
 );
 
 router.get(
   "/:workspaceId/members/:memberId",
-  checkAuth(Role.USER),
+  checkAuth(Role.USER, Role.ADMIN, Role.SUPER_ADMIN),
   workspaceController.getWorkspaceMember,
 );
 
 router.patch(
   "/:workspaceId/members",
   validateRequest(addWorkspaceMemberZodSchema),
-  checkAuth(Role.USER),
+  checkAuth(Role.USER, Role.ADMIN, Role.SUPER_ADMIN),
   workspaceController.addMember,
 );
 
 router.patch(
   "/:workspaceId/members/:memberId",
   validateRequest(updateWorkspaceMemberZodSchema),
-  checkAuth(Role.USER),
+  checkAuth(Role.USER, Role.ADMIN, Role.SUPER_ADMIN),
   workspaceController.updateMemberRole,
 );
 
 router.delete(
   "/:workspaceId/members/:memberId",
-  checkAuth(Role.USER),
+  checkAuth(Role.USER, Role.ADMIN, Role.SUPER_ADMIN),
   workspaceController.removeMember,
 );
 

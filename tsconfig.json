@@ -11,6 +11,6 @@
     "esModuleInterop": true,
     "ignoreDeprecations": "6.0"
   },
-  "include": ["src"],
+  "include": ["src", "src/app/modules/task/task.interface.ts"],
   "exclude": ["node_modules", "dist", "generated/prisma"]
 }
