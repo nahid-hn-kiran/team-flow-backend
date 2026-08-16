@@ -51,6 +51,26 @@ const createWorkspace = async (
   return result;
 };
 
+const getMyWorkspaces = async (userId: string) => {
+  const result = await prisma.workspaceMember.findMany({
+    where: {
+      userId,
+      workspace: {
+        isDeleted: false,
+      },
+    },
+    include: {
+      workspace: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return result;
+};
+
 export const workspaceService = {
   createWorkspace,
+  getMyWorkspaces,
 };

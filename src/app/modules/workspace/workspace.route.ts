@@ -7,6 +7,7 @@ import { Role } from "../../../generated/prisma/enums";
 
 const router = Router();
 
+router.get("/", checkAuth(Role.USER), workspaceController.getMyWorkspaces);
 router.post(
   "/",
   validateRequest(workspaceCreateZodSchema),
