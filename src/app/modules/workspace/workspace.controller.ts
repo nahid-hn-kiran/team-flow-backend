@@ -77,10 +77,45 @@ const deleteWorkspace = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const addMember = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { workspaceId } = req.params;
+  const result = await workspaceService.addMember(
+    workspaceId as string,
+    userId,
+    req.body,
+  );
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Member added successfully.",
+    data: result,
+  });
+});
+
+const getWorkspaceMembers = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.user;
+  const { workspaceId } = req.params;
+  const result = await workspaceService.getWorkspaceMembers(
+    workspaceId as string,
+    userId,
+  );
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Members retrived successfully.",
+    data: result,
+  });
+});
+
 export const workspaceController = {
   createWorkspace,
   getMyWorkspaces,
   getWorkspaceById,
   updateWorkspace,
   deleteWorkspace,
+  addMember,
+  getWorkspaceMembers,
 };

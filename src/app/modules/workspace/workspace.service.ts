@@ -2,10 +2,11 @@ import status from "http-status";
 import { prisma } from "../../../lib/prisma";
 import AppError from "../../errorHelpers/appError";
 import {
+  IAddWorkspaceMemberPayload,
   ICreateWorkspacePayload,
   IUpdateWorksspacePayload,
 } from "./workspace.interface";
-import { WorkspaceRole } from "../../../generated/prisma/enums";
+import { UserStatus, WorkspaceRole } from "../../../generated/prisma/enums";
 
 const createWorkspace = async (
   payload: ICreateWorkspacePayload,
@@ -213,10 +214,161 @@ const deleteWorkspace = async (workspaceId: string, userId: string) => {
   return null;
 };
 
+const addMember = async (
+  workspaceId: string,
+  requesterId: string,
+  payload: IAddWorkspaceMemberPayload,
+) => {
+  const { email, role = WorkspaceRole.MEMBER } = payload;
+
+  const requester = await prisma.workspaceMember.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId: requesterId,
+      },
+    },
+  });
+
+  if (!requester) {
+    throw new AppError(status.NOT_FOUND, "Workspace not found");
+  }
+
+  if (
+    requester.role !== WorkspaceRole.OWNER &&
+    requester.role !== WorkspaceRole.ADMIN
+  ) {
+    throw new AppError(
+      status.FORBIDDEN,
+      "You do not have permission to add members",
+    );
+  }
+
+  const workspace = await prisma.workspace.findFirst({
+    where: {
+      id: workspaceId,
+      isDeleted: false,
+    },
+  });
+
+  if (!workspace) {
+    throw new AppError(status.NOT_FOUND, "Workspace not found.");
+  }
+
+  const user = await prisma.user.findFirst({
+    where: {
+      email,
+      isDeleted: false,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, "No user found with this email");
+  }
+
+  const existingMember = await prisma.workspaceMember.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId: user.id,
+      },
+    },
+  });
+
+  if (existingMember) {
+    throw new AppError(
+      status.CONFLICT,
+      "User is already a member of this workspace",
+    );
+  }
+
+  if (requester.role === WorkspaceRole.ADMIN && role === WorkspaceRole.ADMIN) {
+    throw new AppError(
+      status.FORBIDDEN,
+      "Only the workspace owner can assign the ADMIN role.",
+    );
+  }
+
+  const member = await prisma.workspaceMember.create({
+    data: {
+      workspaceId,
+      userId: user.id,
+      role,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+  return member;
+};
+
+const getWorkspaceMembers = async (
+  workspaceId: string,
+  requesterId: string,
+) => {
+  const requester = await prisma.workspaceMember.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId,
+        userId: requesterId,
+      },
+    },
+  });
+
+  if (!requester) {
+    throw new AppError(status.NOT_FOUND, "Workspace not found.");
+  }
+
+  const workspace = await prisma.workspace.findFirst({
+    where: {
+      id: workspaceId,
+      isDeleted: false,
+    },
+  });
+
+  if (!workspace) {
+    throw new AppError(status.NOT_FOUND, "Workspace not found.");
+  }
+
+  const members = await prisma.workspaceMember.findMany({
+    where: {
+      workspaceId,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          status: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  return members;
+};
+
 export const workspaceService = {
   createWorkspace,
   getMyWorkspaces,
   getWorkspaceById,
   updateWorkspace,
   deleteWorkspace,
+  addMember,
+  getWorkspaceMembers,
 };

@@ -1,7 +1,11 @@
 import { Router } from "express";
 import { workspaceController } from "./workspace.controller";
 import { validateRequest } from "../../middleware/validateRequest";
-import { workspaceCreateZodSchema } from "./workspace.validation";
+import {
+  addWorkspaceMemberZodSchema,
+  workspaceCreateZodSchema,
+  workspaceUpdateZodSchema,
+} from "./workspace.validation";
 import { checkAuth } from "../../middleware/checkAuth";
 import { Role } from "../../../generated/prisma/enums";
 
@@ -15,6 +19,7 @@ router.get(
 );
 router.patch(
   "/:workspaceId",
+  validateRequest(workspaceUpdateZodSchema),
   checkAuth(Role.USER),
   workspaceController.updateWorkspace,
 );
@@ -28,6 +33,19 @@ router.post(
   validateRequest(workspaceCreateZodSchema),
   checkAuth(Role.USER),
   workspaceController.createWorkspace,
+);
+
+router.get(
+  "/:workspaceId/member",
+  checkAuth(Role.USER),
+  workspaceController.getWorkspaceMembers,
+);
+
+router.patch(
+  "/:workspaceId/member",
+  validateRequest(addWorkspaceMemberZodSchema),
+  checkAuth(Role.USER),
+  workspaceController.addMember,
 );
 
 export const workspaceRoutes = router;

@@ -34,11 +34,13 @@ export const workspaceUpdateZodSchema = z
   });
 
 export const addWorkspaceMemberZodSchema = z.object({
-  userId: z.string().min(1, "User ID is required"),
+  email: z.email({
+    message: "Please provide a valid email address.",
+  }),
 
   role: z.enum(["ADMIN", "MEMBER"]).default("MEMBER"),
 });
 
-export const updateWorkspaceMemberRoleZodSchema = z.object({
+export const updateWorkspaceMemberZodSchema = z.object({
   role: z.enum(["ADMIN", "MEMBER"]),
 });

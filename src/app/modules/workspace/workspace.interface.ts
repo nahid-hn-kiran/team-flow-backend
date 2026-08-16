@@ -1,3 +1,5 @@
+import { WorkspaceRole } from "../../../generated/prisma/enums";
+
 export interface ICreateWorkspacePayload {
   name: string;
   description?: string;
@@ -9,6 +11,10 @@ export interface IUpdateWorksspacePayload {
 }
 
 export interface IAddWorkspaceMemberPayload {
-  userId: string;
+  email: string;
   role?: "ADMIN" | "MEMBER";
+}
+
+export interface IUpdateWorkspaceMemberPayload {
+  role: WorkspaceRole;
 }
