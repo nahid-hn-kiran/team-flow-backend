@@ -1,150 +1,64 @@
 import { Request, Response } from "express";
 import status from "http-status";
-import catchAsync from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
-import { taskService } from "./admin.service";
+import { AdminService } from "./admin.service";
+import catchAsync from "../../shared/catchAsync";
 
-const createTask = catchAsync(async (req: Request, res: Response) => {
-  const { workspaceId, projectId } = req.params;
-  const { userId } = req.user;
-
-  const result = await taskService.createTask(
-    workspaceId as string,
-    projectId as string,
-    req.body,
-    userId,
-  );
-
-  sendResponse(res, {
-    httpStatusCode: status.CREATED,
-    success: true,
-    message: "Task created successfully.",
-    data: result,
-  });
-});
-
-const getProjectTasks = catchAsync(async (req: Request, res: Response) => {
-  const { workspaceId, projectId } = req.params;
-  const { userId } = req.user;
-
-  const result = await taskService.getProjectTasks(
-    workspaceId as string,
-    projectId as string,
-    userId,
-  );
+const getAllAdmins = catchAsync(async (req: Request, res: Response) => {
+  const result = await AdminService.getAllAdmins();
 
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
-    message: "Tasks retrieved successfully.",
+    message: "Admins fetched successfully",
     data: result,
   });
 });
 
-const getTaskById = catchAsync(async (req: Request, res: Response) => {
-  const { workspaceId, projectId, taskId } = req.params;
-  const { userId } = req.user;
+const getAdminById = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
 
-  const result = await taskService.getTaskById(
-    workspaceId as string,
-    projectId as string,
-    taskId as string,
-    userId,
-  );
+  const admin = await AdminService.getAdminById(id as string);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
-    message: "Task retrieved successfully.",
-    data: result,
+    message: "Admin fetched successfully",
+    data: admin,
   });
 });
 
-const updateTask = catchAsync(async (req: Request, res: Response) => {
-  const { workspaceId, projectId, taskId } = req.params;
-  const { userId } = req.user;
+const updateAdmin = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const payload = req.body;
 
-  const result = await taskService.updateTask(
-    workspaceId as string,
-    projectId as string,
-    taskId as string,
-    req.body,
-    userId,
-  );
+  const updatedAdmin = await AdminService.updateAdmin(id as string, payload);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
-    message: "Task updated successfully.",
-    data: result,
+    message: "Admin updated successfully",
+    data: updatedAdmin,
   });
 });
 
-const updateTaskStatus = catchAsync(async (req: Request, res: Response) => {
-  const { workspaceId, projectId, taskId } = req.params;
-  const { userId } = req.user;
+const deleteAdmin = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const user = req.user;
 
-  const result = await taskService.updateTaskStatus(
-    workspaceId as string,
-    projectId as string,
-    taskId as string,
-    req.body,
-    userId,
-  );
+  const result = await AdminService.deleteAdmin(id as string, user);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
-    message: "Task status updated successfully.",
+    message: "Admin deleted successfully",
     data: result,
   });
 });
 
-const assignTask = catchAsync(async (req: Request, res: Response) => {
-  const { workspaceId, projectId, taskId } = req.params;
-  const { userId } = req.user;
-
-  const result = await taskService.assignTask(
-    workspaceId as string,
-    projectId as string,
-    taskId as string,
-    req.body,
-    userId,
-  );
-
-  sendResponse(res, {
-    httpStatusCode: status.OK,
-    success: true,
-    message: "Task assigned successfully.",
-    data: result,
-  });
-});
-
-const deleteTask = catchAsync(async (req: Request, res: Response) => {
-  const { workspaceId, projectId, taskId } = req.params;
-  const { userId } = req.user;
-
-  const result = await taskService.deleteTask(
-    workspaceId as string,
-    projectId as string,
-    taskId as string,
-    userId,
-  );
-
-  sendResponse(res, {
-    httpStatusCode: status.OK,
-    success: true,
-    message: "Task deleted successfully.",
-    data: result,
-  });
-});
-
-export const taskController = {
-  createTask,
-  getProjectTasks,
-  getTaskById,
-  updateTask,
-  updateTaskStatus,
-  assignTask,
-  deleteTask,
+export const AdminController = {
+  getAllAdmins,
+  updateAdmin,
+  deleteAdmin,
+  getAdminById,
 };

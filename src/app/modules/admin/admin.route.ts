@@ -1,63 +1,28 @@
 import { Router } from "express";
-import { taskController } from "./admin.controller";
+import { Role } from "../../../generated/prisma/enums";
 import { checkAuth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
-import { Role } from "../../../generated/prisma/enums";
-import {
-  assignTaskZodSchema,
-  createTaskZodSchema,
-  updateTaskStatusZodSchema,
-  updateTaskZodSchema,
-} from "./admin.validation";
+import { AdminController } from "./admin.controller";
+import { updateAdminZodSchema } from "./admin.validation";
 
 const router = Router();
 
-const allowedRoles = [Role.USER, Role.ADMIN, Role.SUPER_ADMIN];
-
-router.post(
-  "/:workspaceId/projects/:projectId/tasks",
-  checkAuth(...allowedRoles),
-  validateRequest(createTaskZodSchema),
-  taskController.createTask,
-);
-
 router.get(
-  "/:workspaceId/projects/:projectId/tasks",
-  checkAuth(...allowedRoles),
-  taskController.getProjectTasks,
+  "/",
+  checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
+  AdminController.getAllAdmins,
 );
-
 router.get(
-  "/:workspaceId/projects/:projectId/tasks/:taskId",
-  checkAuth(...allowedRoles),
-  taskController.getTaskById,
+  "/:id",
+  checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
+  AdminController.getAdminById,
 );
-
 router.patch(
-  "/:workspaceId/projects/:projectId/tasks/:taskId",
-  checkAuth(...allowedRoles),
-  validateRequest(updateTaskZodSchema),
-  taskController.updateTask,
+  "/:id",
+  checkAuth(Role.SUPER_ADMIN),
+  validateRequest(updateAdminZodSchema),
+  AdminController.updateAdmin,
 );
+router.delete("/:id", checkAuth(Role.SUPER_ADMIN), AdminController.deleteAdmin);
 
-router.patch(
-  "/:workspaceId/projects/:projectId/tasks/:taskId/status",
-  checkAuth(...allowedRoles),
-  validateRequest(updateTaskStatusZodSchema),
-  taskController.updateTaskStatus,
-);
-
-router.patch(
-  "/:workspaceId/projects/:projectId/tasks/:taskId/assign",
-  checkAuth(...allowedRoles),
-  validateRequest(assignTaskZodSchema),
-  taskController.assignTask,
-);
-
-router.patch(
-  "/:workspaceId/projects/:projectId/tasks/:taskId/delete",
-  checkAuth(...allowedRoles),
-  taskController.deleteTask,
-);
-
-export const taskRoutes = router;
+export const AdminRoutes = router;
