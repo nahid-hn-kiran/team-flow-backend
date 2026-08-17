@@ -4,6 +4,30 @@ import { sendResponse } from "../../shared/sendResponse";
 import { AdminService } from "./admin.service";
 import catchAsync from "../../shared/catchAsync";
 
+const getAllUsers = catchAsync(async (req: Request, res: Response) => {
+  const result = await AdminService.getAllUsers();
+  console.log(result);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Users fetched successfully",
+    data: result,
+  });
+});
+
+const getUserById = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const user = await AdminService.getUserById(id as string);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "User fetched successfully",
+    data: user,
+  });
+});
 const getAllAdmins = catchAsync(async (req: Request, res: Response) => {
   const result = await AdminService.getAllAdmins();
 
@@ -57,6 +81,8 @@ const deleteAdmin = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const AdminController = {
+  getAllUsers,
+  getUserById,
   getAllAdmins,
   updateAdmin,
   deleteAdmin,

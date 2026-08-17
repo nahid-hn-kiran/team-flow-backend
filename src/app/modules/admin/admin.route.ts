@@ -7,6 +7,17 @@ import { updateAdminZodSchema } from "./admin.validation";
 
 const router = Router();
 
+// Users
+router.get(
+  "/users",
+  checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
+  AdminController.getAllUsers,
+);
+router.get(
+  "/users/:id",
+  checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
+  AdminController.getUserById,
+);
 router.get(
   "/",
   checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
