@@ -433,11 +433,7 @@ Authorization is handled at multiple levels.
 Protected routes use authentication middleware:
 
 ```ts
-checkAuth(
-  Role.USER,
-  Role.ADMIN,
-  Role.SUPER_ADMIN,
-)
+checkAuth(Role.USER, Role.ADMIN, Role.SUPER_ADMIN);
 ```
 
 ### Service-level authorization
@@ -809,5 +805,3 @@ TeamFlow
     ├── Admin
     └── Super Admin
 ```
-
-The next stage of development is the TeamFlow frontend and full-stack integration.
