@@ -17,7 +17,8 @@ model Task {
     creator  User    @relation("TaskCreator", fields: [createdBy], references: [id])
     assignee User?   @relation("TaskAssignee", fields: [assignedTo], references: [id])
 
-    comments Comment[]
+    comments   Comment[]
+    activities Activity[]
 
     @@map("task")
 }

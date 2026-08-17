@@ -53,3 +53,33 @@ export const TaskPriority = {
 } as const
 
 export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority]
+
+
+export const ActivityAction = {
+  CREATED: 'CREATED',
+  UPDATED: 'UPDATED',
+  DELETED: 'DELETED',
+  ASSIGNED: 'ASSIGNED',
+  UNASSIGNED: 'UNASSIGNED',
+  STATUS_CHANGED: 'STATUS_CHANGED',
+  PRIORITY_CHANGED: 'PRIORITY_CHANGED',
+  DEADLINE_CHANGED: 'DEADLINE_CHANGED',
+  MEMBER_ADDED: 'MEMBER_ADDED',
+  MEMBER_REMOVED: 'MEMBER_REMOVED',
+  COMMENT_ADDED: 'COMMENT_ADDED',
+  COMMENT_UPDATED: 'COMMENT_UPDATED',
+  COMMENT_DELETED: 'COMMENT_DELETED'
+} as const
+
+export type ActivityAction = (typeof ActivityAction)[keyof typeof ActivityAction]
+
+
+export const ActivityEntity = {
+  WORKSPACE: 'WORKSPACE',
+  PROJECT: 'PROJECT',
+  TASK: 'TASK',
+  COMMENT: 'COMMENT',
+  MEMBER: 'MEMBER'
+} as const
+
+export type ActivityEntity = (typeof ActivityEntity)[keyof typeof ActivityEntity]

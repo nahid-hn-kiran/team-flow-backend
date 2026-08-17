@@ -5,7 +5,12 @@ import {
   ICreateCommentPayload,
   IUpdateCommentPayload,
 } from "./comment.interface";
-import { WorkspaceRole } from "../../../generated/prisma/enums";
+import {
+  ActivityAction,
+  ActivityEntity,
+  WorkspaceRole,
+} from "../../../generated/prisma/enums";
+import { activityService } from "../activity/activity.service";
 
 const checkTaskAccess = async (
   workspaceId: string,
@@ -129,27 +134,48 @@ const createComment = async (
   payload: ICreateCommentPayload,
   userId: string,
 ) => {
-  await checkTaskAccess(workspaceId, taskId, userId);
+  const { task } = await checkTaskAccess(workspaceId, taskId, userId);
 
-  const comment = await prisma.comment.create({
-    data: {
-      content: payload.content,
-      taskId,
-      authorId: userId,
-    },
-    include: {
-      author: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          image: true,
+  const result = await prisma.$transaction(async (tx) => {
+    const comment = await tx.comment.create({
+      data: {
+        content: payload.content,
+        taskId,
+        authorId: userId,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+          },
         },
       },
-    },
+    });
+
+    await activityService.createActivity(
+      {
+        action: ActivityAction.COMMENT_ADDED,
+        entityType: ActivityEntity.COMMENT,
+        entityId: comment.id,
+
+        workspaceId,
+        projectId: task.projectId,
+        taskId: task.id,
+
+        performedBy: userId,
+
+        description: `A comment was added to task "${task.title}".`,
+      },
+      tx,
+    );
+
+    return comment;
   });
 
-  return comment;
+  return result;
 };
 
 const updateComment = async (
@@ -159,6 +185,7 @@ const updateComment = async (
   payload: IUpdateCommentPayload,
   userId: string,
 ) => {
+  const { task } = await checkTaskAccess(workspaceId, taskId, userId);
   const { membership } = await checkTaskAccess(workspaceId, taskId, userId);
 
   const comment = await prisma.comment.findFirst({
@@ -186,26 +213,47 @@ const updateComment = async (
     );
   }
 
-  const updatedComment = await prisma.comment.update({
-    where: {
-      id: commentId,
-    },
-    data: {
-      content: payload.content,
-    },
-    include: {
-      author: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          image: true,
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedComment = await tx.comment.update({
+      where: {
+        id: commentId,
+      },
+      data: {
+        content: payload.content,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+          },
         },
       },
-    },
+    });
+
+    await activityService.createActivity(
+      {
+        action: ActivityAction.COMMENT_UPDATED,
+        entityType: ActivityEntity.COMMENT,
+        entityId: commentId,
+
+        workspaceId,
+        projectId: task.projectId,
+        taskId,
+
+        performedBy: userId,
+
+        description: `A comment on task "${task.title}" was updated.`,
+      },
+      tx,
+    );
+
+    return updatedComment;
   });
 
-  return updatedComment;
+  return result;
 };
 
 const deleteComment = async (
@@ -214,7 +262,11 @@ const deleteComment = async (
   commentId: string,
   userId: string,
 ) => {
-  const { membership } = await checkTaskAccess(workspaceId, taskId, userId);
+  const { task, membership } = await checkTaskAccess(
+    workspaceId,
+    taskId,
+    userId,
+  );
 
   const comment = await prisma.comment.findFirst({
     where: {
@@ -241,17 +293,38 @@ const deleteComment = async (
     );
   }
 
-  const deletedComment = await prisma.comment.update({
-    where: {
-      id: commentId,
-    },
-    data: {
-      isDeleted: true,
-      deletedAt: new Date(),
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    const deletedComment = await tx.comment.update({
+      where: {
+        id: commentId,
+      },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
+    });
+
+    await activityService.createActivity(
+      {
+        action: ActivityAction.COMMENT_DELETED,
+        entityType: ActivityEntity.COMMENT,
+        entityId: comment.id,
+
+        workspaceId,
+        projectId: task.projectId,
+        taskId: task.id,
+
+        performedBy: userId,
+
+        description: `A comment was deleted from task "${task.title}".`,
+      },
+      tx,
+    );
+
+    return deletedComment;
   });
 
-  return deletedComment;
+  return result;
 };
 
 export const commentService = {

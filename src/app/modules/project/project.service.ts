@@ -5,7 +5,11 @@ import {
   ICreateProjectPayload,
   IUpdateProjectPayload,
 } from "./project.interface";
-import { WorkspaceRole } from "../../../generated/prisma/enums";
+import {
+  ActivityAction,
+  ActivityEntity,
+  WorkspaceRole,
+} from "../../../generated/prisma/enums";
 
 const createProject = async (
   workspaceId: string,
@@ -63,15 +67,34 @@ const createProject = async (
     );
   }
 
-  const project = await prisma.project.create({
-    data: {
-      name,
-      description,
-      workspaceId,
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    const project = await tx.project.create({
+      data: {
+        name,
+        description,
+        workspaceId,
+      },
+    });
+
+    await tx.activity.create({
+      data: {
+        action: ActivityAction.CREATED,
+        entityType: ActivityEntity.PROJECT,
+        entityId: project.id,
+
+        workspaceId,
+        projectId: project.id,
+
+        performedBy: userId,
+
+        description: `Project "${project.name}" was created.`,
+      },
+    });
+
+    return project;
   });
 
-  return project;
+  return result;
 };
 
 const getWorkspaceProjects = async (workspaceId: string, userId: string) => {
@@ -213,12 +236,38 @@ const updateProject = async (
     }
   }
 
-  return prisma.project.update({
-    where: {
-      id: projectId,
-    },
-    data: payload,
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedProject = await tx.project.update({
+      where: {
+        id: projectId,
+      },
+      data: payload,
+    });
+
+    await tx.activity.create({
+      data: {
+        action: ActivityAction.UPDATED,
+        entityType: ActivityEntity.PROJECT,
+        entityId: projectId,
+
+        workspaceId,
+        projectId,
+
+        performedBy: userId,
+
+        description: `Project "${updatedProject.name}" was updated.`,
+
+        metadata: {
+          oldName: project.name,
+          newName: updatedProject.name,
+        },
+      },
+    });
+
+    return updatedProject;
   });
+
+  return result;
 };
 
 const deleteProject = async (
@@ -258,14 +307,31 @@ const deleteProject = async (
     throw new AppError(status.NOT_FOUND, "Project not found.");
   }
 
-  await prisma.project.update({
-    where: {
-      id: projectId,
-    },
-    data: {
-      isDeleted: true,
-      deletedAt: new Date(),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.project.update({
+      where: {
+        id: projectId,
+      },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
+    });
+
+    await tx.activity.create({
+      data: {
+        action: ActivityAction.DELETED,
+        entityType: ActivityEntity.PROJECT,
+        entityId: projectId,
+
+        workspaceId,
+        projectId,
+
+        performedBy: userId,
+
+        description: `Project "${project.name}" was deleted.`,
+      },
+    });
   });
 
   return null;

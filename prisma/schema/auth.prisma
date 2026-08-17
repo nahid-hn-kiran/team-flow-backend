@@ -13,8 +13,10 @@ model User {
 
   workspaceMemberships WorkspaceMember[]
   comments             Comment[]
-  tasksCreated         Task[] @relation("TaskCreator")
-  tasksAssigned        Task[] @relation("TaskAssignee")
+  tasksCreated         Task[]            @relation("TaskCreator")
+  tasksAssigned        Task[]            @relation("TaskAssignee")
+  activitiesPerformed  Activity[]        @relation("ActivityPerformer")
+  admin                Admin?
 
   isDeleted Boolean   @default(false)
   deletedAt DateTime?

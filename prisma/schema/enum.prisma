@@ -28,3 +28,27 @@ enum TaskPriority {
     MEDIUM
     HIGH
 }
+
+enum ActivityAction {
+    CREATED
+    UPDATED
+    DELETED
+    ASSIGNED
+    UNASSIGNED
+    STATUS_CHANGED
+    PRIORITY_CHANGED
+    DEADLINE_CHANGED
+    MEMBER_ADDED
+    MEMBER_REMOVED
+    COMMENT_ADDED
+    COMMENT_UPDATED
+    COMMENT_DELETED
+}
+
+enum ActivityEntity {
+    WORKSPACE
+    PROJECT
+    TASK
+    COMMENT
+    MEMBER
+}

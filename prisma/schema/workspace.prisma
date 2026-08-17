@@ -7,8 +7,9 @@ model Workspace {
     isDeleted   Boolean   @default(false)
     deletedAt   DateTime?
 
-    projects Project[]
-    members  WorkspaceMember[]
+    projects   Project[]
+    members    WorkspaceMember[]
+    activities Activity[]
 
     @@map("workspace")
 }

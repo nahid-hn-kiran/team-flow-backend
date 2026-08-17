@@ -7,7 +7,12 @@ import {
   IUpdateWorkspaceMemberPayload,
   IUpdateWorksspacePayload,
 } from "./workspace.interface";
-import { UserStatus, WorkspaceRole } from "../../../generated/prisma/enums";
+import {
+  ActivityAction,
+  ActivityEntity,
+  UserStatus,
+  WorkspaceRole,
+} from "../../../generated/prisma/enums";
 
 const createWorkspace = async (
   payload: ICreateWorkspacePayload,
@@ -47,6 +52,17 @@ const createWorkspace = async (
         workspaceId: workspace.id,
         userId,
         role: WorkspaceRole.OWNER,
+      },
+    });
+
+    await tx.activity.create({
+      data: {
+        action: ActivityAction.CREATED,
+        entityType: ActivityEntity.WORKSPACE,
+        entityId: workspace.id,
+        workspaceId: workspace.id,
+        performedBy: userId,
+        description: `Workspace "${workspace.name}" was created.`,
       },
     });
 
@@ -158,16 +174,35 @@ const updateWorkspace = async (
         "You already have a workspace with this name.",
       );
     }
+  }
 
-    return prisma.workspace.update({
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedWorkspace = await tx.workspace.update({
       where: {
         id: workspaceId,
       },
       data: payload,
     });
-  }
 
-  return membership;
+    await tx.activity.create({
+      data: {
+        action: ActivityAction.UPDATED,
+        entityType: ActivityEntity.WORKSPACE,
+        entityId: workspaceId,
+        workspaceId,
+        performedBy: userId,
+        description: `Workspace "${updatedWorkspace.name}" was updated.`,
+        metadata: {
+          oldName: workspace.name,
+          newName: updatedWorkspace.name,
+        },
+      },
+    });
+
+    return updatedWorkspace;
+  });
+
+  return result;
 };
 
 const deleteWorkspace = async (workspaceId: string, userId: string) => {
@@ -202,14 +237,27 @@ const deleteWorkspace = async (workspaceId: string, userId: string) => {
     throw new AppError(status.NOT_FOUND, "Workspace not found.");
   }
 
-  await prisma.workspace.update({
-    where: {
-      id: workspaceId,
-    },
-    data: {
-      isDeleted: true,
-      deletedAt: new Date(),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.workspace.update({
+      where: {
+        id: workspaceId,
+      },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
+    });
+
+    await tx.activity.create({
+      data: {
+        action: ActivityAction.DELETED,
+        entityType: ActivityEntity.WORKSPACE,
+        entityId: workspaceId,
+        workspaceId,
+        performedBy: userId,
+        description: `Workspace "${workspace.name}" was deleted.`,
+      },
+    });
   });
 
   return null;
@@ -291,26 +339,49 @@ const addMember = async (
     );
   }
 
-  const member = await prisma.workspaceMember.create({
-    data: {
-      workspaceId,
-      userId: user.id,
-      role,
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          image: true,
-          status: true,
+  const result = await prisma.$transaction(async (tx) => {
+    const member = await tx.workspaceMember.create({
+      data: {
+        workspaceId,
+        userId: user.id,
+        role,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            status: true,
+          },
         },
       },
-    },
+    });
+
+    await tx.activity.create({
+      data: {
+        action: ActivityAction.MEMBER_ADDED,
+        entityType: ActivityEntity.MEMBER,
+        entityId: member.id,
+
+        workspaceId,
+
+        performedBy: requesterId,
+
+        description: `${member.user.name} was added to the workspace.`,
+
+        metadata: {
+          userId: member.user.id,
+          role: member.role,
+        },
+      },
+    });
+
+    return member;
   });
 
-  return member;
+  return result;
 };
 
 const getWorkspaceMembers = async (
@@ -455,30 +526,54 @@ const updateMemberRole = async (
     );
   }
 
-  const updatedMember = await prisma.workspaceMember.update({
-    where: {
-      workspaceId_userId: {
-        workspaceId,
-        userId: memberId,
-      },
-    },
-    data: {
-      role: payload.role,
-    },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          image: true,
-          status: true,
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedMember = await tx.workspaceMember.update({
+      where: {
+        workspaceId_userId: {
+          workspaceId,
+          userId: memberId,
         },
       },
-    },
+      data: {
+        role: payload.role,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    await tx.activity.create({
+      data: {
+        action: ActivityAction.UPDATED,
+        entityType: ActivityEntity.MEMBER,
+        entityId: updatedMember.id,
+
+        workspaceId,
+
+        performedBy: requesterId,
+
+        description: `${updatedMember.user.name}'s workspace role was changed from ${member.role} to ${updatedMember.role}.`,
+
+        metadata: {
+          userId: updatedMember.user.id,
+          oldRole: member.role,
+          newRole: updatedMember.role,
+        },
+      },
+    });
+
+    return updatedMember;
   });
 
-  return updatedMember;
+  return result;
 };
 
 const removeMember = async (
@@ -516,6 +611,15 @@ const removeMember = async (
         userId: memberId,
       },
     },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
   });
 
   if (!member) {
@@ -539,13 +643,34 @@ const removeMember = async (
     );
   }
 
-  await prisma.workspaceMember.delete({
-    where: {
-      workspaceId_userId: {
-        workspaceId,
-        userId: memberId,
+  await prisma.$transaction(async (tx) => {
+    await tx.workspaceMember.delete({
+      where: {
+        workspaceId_userId: {
+          workspaceId,
+          userId: memberId,
+        },
       },
-    },
+    });
+
+    await tx.activity.create({
+      data: {
+        action: ActivityAction.MEMBER_REMOVED,
+        entityType: ActivityEntity.MEMBER,
+        entityId: member.id,
+
+        workspaceId,
+
+        performedBy: requesterId,
+
+        description: `${member.user.name} was removed from the workspace.`,
+
+        metadata: {
+          userId: member.user.id,
+          role: member.role,
+        },
+      },
+    });
   });
 
   return null;
@@ -557,7 +682,8 @@ export const workspaceService = {
   getWorkspaceById,
   updateWorkspace,
   deleteWorkspace,
-  //   Member
+
+  // Member
   addMember,
   getWorkspaceMembers,
   getWorkspaceMember,

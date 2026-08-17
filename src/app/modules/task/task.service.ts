@@ -7,7 +7,11 @@ import {
   IUpdateTaskPayload,
   IUpdateTaskStatusPayload,
 } from "./task.interface";
-import { WorkspaceRole } from "../../../generated/prisma/enums";
+import {
+  ActivityAction,
+  ActivityEntity,
+  WorkspaceRole,
+} from "../../../generated/prisma/enums";
 
 const getWorkspaceMembership = async (workspaceId: string, userId: string) => {
   const membership = await prisma.workspaceMember.findUnique({
@@ -86,32 +90,52 @@ const createTask = async (
     }
   }
 
-  const task = await prisma.task.create({
-    data: {
-      title: payload.title,
-      description: payload.description,
-      priority: payload.priority,
-      dueDate: payload.dueDate ? new Date(payload.dueDate) : undefined,
-      assignedTo: payload.assignedTo,
-      createdBy: userId,
-      projectId,
-    },
-    include: {
-      assignee: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+  const task = await prisma.$transaction(async (tx) => {
+    const createdTask = await tx.task.create({
+      data: {
+        title: payload.title,
+        description: payload.description,
+        priority: payload.priority,
+        dueDate: payload.dueDate ? new Date(payload.dueDate) : undefined,
+        assignedTo: payload.assignedTo,
+        createdBy: userId,
+        projectId,
+      },
+      include: {
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
-      creator: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
+    });
+
+    await tx.activity.create({
+      data: {
+        action: ActivityAction.CREATED,
+        entityType: ActivityEntity.TASK,
+        entityId: createdTask.id,
+
+        workspaceId,
+        projectId: createdTask.projectId,
+        taskId: createdTask.id,
+
+        performedBy: userId,
+
+        description: `Task "${createdTask.title}" was created.`,
       },
-    },
+    });
+
+    return createdTask;
   });
 
   return task;
@@ -285,51 +309,71 @@ const updateTask = async (
     }
   }
 
-  const updatedTask = await prisma.task.update({
-    where: {
-      id: taskId,
-    },
-    data: {
-      ...(payload.title !== undefined && {
-        title: payload.title,
-      }),
+  const updatedTask = await prisma.$transaction(async (tx) => {
+    const updatedTask = await tx.task.update({
+      where: {
+        id: taskId,
+      },
+      data: {
+        ...(payload.title !== undefined && {
+          title: payload.title,
+        }),
 
-      ...(payload.description !== undefined && {
-        description: payload.description,
-      }),
+        ...(payload.description !== undefined && {
+          description: payload.description,
+        }),
 
-      ...(payload.priority !== undefined && {
-        priority: payload.priority,
-      }),
+        ...(payload.priority !== undefined && {
+          priority: payload.priority,
+        }),
 
-      ...(payload.status !== undefined && {
-        status: payload.status,
-      }),
+        ...(payload.status !== undefined && {
+          status: payload.status,
+        }),
 
-      ...(payload.dueDate !== undefined && {
-        dueDate: payload.dueDate ? new Date(payload.dueDate) : null,
-      }),
+        ...(payload.dueDate !== undefined && {
+          dueDate: payload.dueDate ? new Date(payload.dueDate) : null,
+        }),
 
-      ...(payload.assignedTo !== undefined && {
-        assignedTo: payload.assignedTo,
-      }),
-    },
-    include: {
-      assignee: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+        ...(payload.assignedTo !== undefined && {
+          assignedTo: payload.assignedTo,
+        }),
+      },
+      include: {
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
-      creator: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
+    });
+
+    await tx.activity.create({
+      data: {
+        action: ActivityAction.UPDATED,
+        entityType: ActivityEntity.TASK,
+        entityId: updatedTask.id,
+
+        workspaceId,
+        projectId: updatedTask.projectId,
+        taskId: updatedTask.id,
+
+        performedBy: userId,
+
+        description: `Task "${updatedTask.title}" was updated.`,
       },
-    },
+    });
+
+    return updatedTask;
   });
 
   return updatedTask;
@@ -358,6 +402,9 @@ const updateTaskStatus = async (
     throw new AppError(status.NOT_FOUND, "Task not found.");
   }
 
+  const oldStatus = task.status;
+  const newStatus = payload.status;
+
   const isManager =
     membership.role === WorkspaceRole.OWNER ||
     membership.role === WorkspaceRole.ADMIN;
@@ -369,14 +416,41 @@ const updateTaskStatus = async (
     );
   }
 
-  return prisma.task.update({
-    where: {
-      id: taskId,
-    },
-    data: {
-      status: payload.status,
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedTask = await tx.task.update({
+      where: {
+        id: taskId,
+      },
+      data: {
+        status: newStatus,
+      },
+    });
+
+    await tx.activity.create({
+      data: {
+        action: ActivityAction.STATUS_CHANGED,
+        entityType: ActivityEntity.TASK,
+        entityId: task.id,
+
+        workspaceId,
+        projectId: task.projectId,
+        taskId: task.id,
+
+        performedBy: userId,
+
+        description: `Task "${task.title}" status changed from ${oldStatus} to ${newStatus}.`,
+
+        metadata: {
+          oldStatus,
+          newStatus,
+        },
+      },
+    });
+
+    return updatedTask;
   });
+
+  return result;
 };
 
 const assignTask = async (
@@ -430,23 +504,52 @@ const assignTask = async (
     }
   }
 
-  return prisma.task.update({
-    where: {
-      id: taskId,
-    },
-    data: {
-      assignedTo: payload.assignedTo,
-    },
-    include: {
-      assignee: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedTask = await tx.task.update({
+      where: {
+        id: taskId,
+      },
+      data: {
+        assignedTo: payload.assignedTo,
+      },
+      include: {
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
-    },
+    });
+
+    await tx.activity.create({
+      data: {
+        action: ActivityAction.ASSIGNED,
+        entityType: ActivityEntity.TASK,
+        entityId: task.id,
+
+        workspaceId,
+        projectId: task.projectId,
+        taskId: task.id,
+
+        performedBy: userId,
+
+        description: payload.assignedTo
+          ? `Task "${task.title}" was assigned to ${updatedTask.assignee?.name}.`
+          : `Task "${task.title}" was unassigned.`,
+
+        metadata: {
+          previousAssigneeId: task.assignedTo,
+          newAssigneeId: payload.assignedTo ?? null,
+        },
+      },
+    });
+
+    return updatedTask;
   });
+
+  return result;
 };
 
 const deleteTask = async (
@@ -481,15 +584,35 @@ const deleteTask = async (
     throw new AppError(status.NOT_FOUND, "Task not found.");
   }
 
-  return prisma.task.update({
-    where: {
-      id: taskId,
-    },
-    data: {
-      isDeleted: true,
-      deletedAt: new Date(),
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.task.update({
+      where: {
+        id: taskId,
+      },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
+    });
+
+    await tx.activity.create({
+      data: {
+        action: ActivityAction.DELETED,
+        entityType: ActivityEntity.TASK,
+        entityId: task.id,
+
+        workspaceId,
+        projectId: task.projectId,
+        taskId: task.id,
+
+        performedBy: userId,
+
+        description: `Task "${task.title}" was deleted.`,
+      },
+    });
   });
+
+  return null;
 };
 
 export const taskService = {
