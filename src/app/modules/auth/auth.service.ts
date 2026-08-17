@@ -267,6 +267,38 @@ const resetPassword = async (
   });
 };
 
+const getMyProfile = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+      role: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+
+      admin: {
+        select: {
+          id: true,
+          contactNumber: true,
+          profilePhoto: true,
+        },
+      },
+    },
+  });
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, "User not found.");
+  }
+
+  return user;
+};
+
 export const authService = {
   registerUser,
   loginUser,
@@ -275,4 +307,5 @@ export const authService = {
   changePassword,
   forgetPassword,
   resetPassword,
+  getMyProfile,
 };

@@ -22,6 +22,12 @@ router.post(
   authController.loginUser,
 );
 
+router.get(
+  "/my-profile",
+  checkAuth(Role.USER, Role.ADMIN, Role.SUPER_ADMIN),
+  authController.getMyProfile,
+);
+
 router.post("/refresh-token", authController.getNewToken);
 router.post("/logout", authController.logoutUser);
 
