@@ -5,6 +5,19 @@ import { prisma } from "../../../lib/prisma";
 import AppError from "../../errorHelpers/appError";
 import { IRequestUser } from "../../interfaces/requestUser";
 
+const getAllUsers = async () => {
+  const user = await prisma.user.findMany();
+  return user;
+};
+
+const getUserById = async (id: string) => {
+  const admin = await prisma.user.findUnique({
+    where: {
+      id,
+    },
+  });
+  return admin;
+};
 const getAllAdmins = async () => {
   const admins = await prisma.admin.findMany({
     include: {
@@ -105,4 +118,6 @@ export const AdminService = {
   getAdminById,
   updateAdmin,
   deleteAdmin,
+  getAllUsers,
+  getUserById,
 };
