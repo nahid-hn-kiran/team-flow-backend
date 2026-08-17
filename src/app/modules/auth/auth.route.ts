@@ -28,6 +28,12 @@ router.get(
   authController.getMyProfile,
 );
 
+router.patch(
+  "/update-my-profile",
+  checkAuth(Role.USER, Role.ADMIN, Role.SUPER_ADMIN),
+  authController.updateMyProfile,
+);
+
 router.post("/refresh-token", authController.getNewToken);
 router.post("/logout", authController.logoutUser);
 

@@ -3,12 +3,16 @@ import { auth } from "../../../lib/auth";
 import { prisma } from "../../../lib/prisma";
 import AppError from "../../errorHelpers/appError";
 import { tokenUtils } from "../../utils/token";
-import { IChangePasswordPayload } from "./auth.interface";
+import {
+  IChangePasswordPayload,
+  IUpdateMyProfilePayload,
+} from "./auth.interface";
 import { jwtUtils } from "../../utils/jwt";
 import { envVars } from "../../config/env";
 import z from "zod";
 import { userLoginZodSchema, userRegisterZodSchema } from "./auth.validation";
 import { UserStatus } from "../../../generated/prisma/enums";
+import { IRequestUser } from "../../interfaces/requestUser";
 
 const registerUser = async (payload: z.infer<typeof userRegisterZodSchema>) => {
   const { name, email, password } = payload;
@@ -299,6 +303,72 @@ const getMyProfile = async (userId: string) => {
   return user;
 };
 
+const udpateMyProfile = async (
+  user: IRequestUser,
+  payload: IUpdateMyProfilePayload,
+) => {
+  const userExists = await prisma.user.findUnique({
+    where: {
+      id: user.userId,
+    },
+    include: {
+      admin: true,
+    },
+  });
+
+  if (!userExists) {
+    throw new AppError(status.NOT_FOUND, "User not found.");
+  }
+
+  console.log(userExists);
+
+  if (userExists.isDeleted) {
+    throw new AppError(status.NOT_FOUND, "User not found.");
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const updatedUser = await tx.user.update({
+      where: {
+        id: user.userId,
+      },
+      data: {
+        ...(payload.name !== undefined && {
+          name: payload.name,
+        }),
+
+        ...(payload.image !== undefined && {
+          image: payload.image,
+        }),
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (payload.contactNumber !== undefined && userExists.admin) {
+      await tx.admin.update({
+        where: {
+          id: userExists.admin.id,
+        },
+        data: {
+          contactNumber: payload.contactNumber,
+        },
+      });
+    }
+
+    return updatedUser;
+  });
+
+  return result;
+};
+
 export const authService = {
   registerUser,
   loginUser,
@@ -308,4 +378,5 @@ export const authService = {
   forgetPassword,
   resetPassword,
   getMyProfile,
+  udpateMyProfile,
 };

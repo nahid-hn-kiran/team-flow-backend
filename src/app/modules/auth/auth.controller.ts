@@ -173,6 +173,17 @@ const getMyProfile = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
+  const result = await authService.udpateMyProfile(req.user, req.body);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Profile updated successfully.",
+    data: result,
+  });
+});
+
 export const authController = {
   registerUser,
   loginUser,
@@ -182,4 +193,5 @@ export const authController = {
   forgetPassword,
   resetPassword,
   getMyProfile,
+  updateMyProfile,
 };
