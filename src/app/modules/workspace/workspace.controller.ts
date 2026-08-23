@@ -31,6 +31,7 @@ const getMyWorkspaces = catchAsync(async (req: Request, res: Response) => {
 const getWorkspaceById = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.user;
   const { workspaceId } = req.params;
+  console.log(workspaceId);
   const result = await workspaceService.getWorkspaceById(
     workspaceId as string,
     userId,

@@ -16,6 +16,12 @@ enum WorkspaceRole {
     MEMBER
 }
 
+enum ProjectStatus {
+    ACTIVE
+    PLANNING
+    COMPLETED
+}
+
 enum TaskStatus {
     TODO
     IN_PROGRESS

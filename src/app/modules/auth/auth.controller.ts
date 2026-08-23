@@ -8,6 +8,7 @@ import AppError from "../../errorHelpers/appError";
 import { cookieUtils } from "../../utils/cookie";
 
 const registerUser = catchAsync(async (req: Request, res: Response) => {
+  console.log(req.body);
   const { name, email, password } = req.body;
 
   const result = await authService.registerUser({ name, email, password });

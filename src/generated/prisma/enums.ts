@@ -36,6 +36,15 @@ export const WorkspaceRole = {
 export type WorkspaceRole = (typeof WorkspaceRole)[keyof typeof WorkspaceRole]
 
 
+export const ProjectStatus = {
+  ACTIVE: 'ACTIVE',
+  PLANNING: 'PLANNING',
+  COMPLETED: 'COMPLETED'
+} as const
+
+export type ProjectStatus = (typeof ProjectStatus)[keyof typeof ProjectStatus]
+
+
 export const TaskStatus = {
   TODO: 'TODO',
   IN_PROGRESS: 'IN_PROGRESS',
