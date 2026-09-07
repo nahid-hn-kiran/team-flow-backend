@@ -1,12 +1,12 @@
 import express from "express";
-import { indexRoutes } from "./app/routes";
+import { indexRoutes } from "./app/routes/index.js";
 import { toNodeHandler } from "better-auth/node";
-import { auth } from "./lib/auth";
-import { notFound } from "./app/middleware/notFound";
-import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
+import { auth } from "./lib/auth.js";
+import { notFound } from "./app/middleware/notFound.js";
+import { globalErrorHandler } from "./app/middleware/globalErrorHandler.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import { envVars } from "./app/config/env";
+import { envVars } from "./app/config/env.js";
 const app = express();
 // Enable URL-encoded form data parsing
 app.use(cors({
