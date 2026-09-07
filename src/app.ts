@@ -16,6 +16,7 @@ app.use(
     origin: [
       envVars.google.FRONTEND_URL,
       envVars.BETTER_AUTH_URL,
+      "https://team-flow-backend-1.onrender.com",
       "http://localhost:3000",
       "http://localhost:5000",
     ],
