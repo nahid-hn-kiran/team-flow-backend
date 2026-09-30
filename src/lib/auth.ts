@@ -11,8 +11,9 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql", // or "mysql", "postgresql", ...etc
   }),
-  baseUrl: envVars.BETTER_AUTH_URL,
+  baseURL: envVars.BETTER_AUTH_URL,
   secret: envVars.BETTER_AUTH_SECRET,
+  trustedOrigins: [process.env.FRONTEND_URL || "http://localhost:3000"],
   emailAndPassword: {
     enabled: true,
   },
@@ -55,7 +56,7 @@ export const auth = betterAuth({
             },
           });
           if (user) {
-            sendEmail({
+            await sendEmail({
               to: email,
               subject: "Password reset otp",
               templateName: "otp",

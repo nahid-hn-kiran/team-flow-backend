@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "module": "ESNext",
-    "rootDir": "./src",
+    "rootDir": ".",
     "outDir": "./dist",
     "moduleResolution": "bundler",
     "strict": true,
@@ -11,6 +11,6 @@
     "esModuleInterop": true,
     "ignoreDeprecations": "5.0"
   },
-  "include": ["src", "src/app/modules/task/task.interface.ts"],
+  "include": ["src", "api", "src/app/modules/task/task.interface.ts"],
   "exclude": ["node_modules", "dist", "generated/prisma"]
 }
