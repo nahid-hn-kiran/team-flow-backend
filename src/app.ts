@@ -17,7 +17,7 @@ app.use(
       envVars.google.FRONTEND_URL,
       envVars.BETTER_AUTH_URL,
       "http://localhost:3000",
-      "https://team-flow-backend-6r32.vercel.app",
+      "https://team-flow-frontend-six.vercel.app",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
